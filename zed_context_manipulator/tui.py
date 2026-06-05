@@ -3,9 +3,9 @@
 The UI has two main screens:
 
 * **thread list** -- search/filter threads, mark them for deletion, reassign
-  their project folder, change the next model, or open one.
+    their project folder, change the next model, or open one.
 * **thread detail** -- browse every message/part, select parts, and stage drop
-  or edit actions.
+    or edit actions.
 
 All edits are staged in memory and only written (with an automatic backup) when
 you press ``w``.
@@ -782,34 +782,34 @@ class App:
 _HELP_TEXT = """Zed Context Manipulator - TUI help
 
 Thread list:
-  j / k, arrows   move
-  PgUp / PgDn     page
-  g / G           top / bottom
-  Enter / l       open thread
-  /               search (title, project, content)
-  s               cycle sort (updated / size / title)
-  d               toggle delete mark
-  r               reassign project folder
-  m               change next model (provider:model)
-  t               change title
-  w               write staged changes (makes a backup)
-  q               quit
+    j / k, arrows   move
+    PgUp / PgDn     page
+    g / G           top / bottom
+    Enter / l       open thread
+    /               search (title, project, content)
+    s               cycle sort (updated / size / title)
+    d               toggle delete mark
+    r               reassign project folder
+    m               change next model (provider:model)
+    t               change title
+    w               write staged changes (makes a backup)
+    q               quit
 
 Thread detail:
-  j / k, arrows   move
-  space           select / deselect part
-  a / c           select all / clear selection
-  d               stage drop (replace with placeholder)
-  D               stage remove (delete the part entirely)
-  i               stage strip-images (keep text, drop image data)
-  e               edit text inline
-  E               edit text in $EDITOR
-  u               clear staged change on selection/part
-  /               find within the thread
-  s               cycle sort (document / size / length)
-  Enter           view full part text
-  w               write staged changes
-  q / h / Esc     back to list
+    j / k, arrows   move
+    space           select / deselect part
+    a / c           select all / clear selection
+    d               stage drop (replace with placeholder)
+    D               stage remove (delete the part entirely)
+    i               stage strip-images (keep text, drop image data)
+    e               edit text inline
+    E               edit text in $EDITOR
+    u               clear staged change on selection/part
+    /               find within the thread
+    s               cycle sort (document / size / length)
+    Enter           view full part text
+    w               write staged changes
+    q / h / Esc     back to list
 
 All changes are staged in memory and only written on 'w', which always
 creates a timestamped .bak copy of the database first.

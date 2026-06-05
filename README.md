@@ -13,7 +13,7 @@ surgically, without hand-editing SQLite.
 
 > [!WARNING]
 > This program edits Zed's private database. **Quit Zed before writing
-> changes.** Every write is a *dry run* unless you pass `--write`, and every
+> changes.** Every write is a _dry run_ unless you pass `--write`, and every
 > write makes a timestamped `.bak` copy first. When in doubt, test against a
 > copy (`cp threads.db /tmp/threads.db` then `--db /tmp/threads.db`).
 
@@ -47,24 +47,24 @@ surgically, without hand-editing SQLite.
 
 ## Features
 
-- **Full-text search** across thread titles *and* message content, with plain
+- **Full-text search** across thread titles _and_ message content, with plain
   or regular-expression matching.
-- **Rich filtering** by thread id, title, content, project folder, AI model,
+- **Rich filtering** by thread ID, title, content, project folder, AI model,
   agent profile, parent thread, creation/update date, message count, and
   whether a thread contains images.
 - **Part-level targeting** -- act on individual pieces of a conversation:
   user/assistant text, thinking blocks, images, tool calls, tool results, and
   context mentions.
 - **Drop reads and other tool calls** by tool name, by file **path glob** or
-  **regex**, by URL/command/query, by size, or by error status.
-- **Positional pruning** -- target the oldest *N* messages, the newest *N*, an
+  **regular expression**, by URL/command/query, by size, or by error status.
+- **Positional pruning** -- target the oldest _N_ messages, the newest _N_, an
   index range, or "everything in the middle" while protecting the head/tail.
 - **Three drop modes**: replace with a lightweight `placeholder`, fully
   `remove`, or `strip-images` (keep the text of a tool result but discard the
-  image bytes). Keep the newest *N* images per thread with
+  image bytes). Keep the newest _N_ images per thread with
   `--keep-latest-images`.
-- **Edit and replace** part text programmatically (regex `--replace`) or
-  literally (`--set-text`), in bulk across matching threads.
+- **Edit and replace** part text programmatically (regular expression
+  `--replace`) or literally (`--set-text`), in bulk across matching threads.
 - **Thread management**: delete entire threads, reassign them to another
   project folder, rename them, change the agent profile, or change **which
   model runs next**.
@@ -140,17 +140,17 @@ with `--db /path/to/threads.db`.
 
 Everything lives in one SQLite table, `threads`:
 
-| column               | meaning                                            |
-| -------------------- | -------------------------------------------------- |
-| `id`                 | UUID of the thread                                 |
-| `summary`            | the thread title shown in Zed                      |
-| `updated_at`         | last-modified timestamp (ISO 8601)                 |
-| `created_at`         | creation timestamp                                 |
-| `data_type`          | payload encoding (`zstd` or `json`)                |
-| `data`               | the thread document (zstd-compressed JSON)         |
-| `parent_id`          | parent thread, if any                              |
-| `folder_paths`       | project folder(s), newline-separated               |
-| `folder_paths_order` | display order of those folders                     |
+| column               | meaning                                    |
+| -------------------- | ------------------------------------------ |
+| `id`                 | UUID of the thread                         |
+| `summary`            | the thread title shown in Zed              |
+| `updated_at`         | last-modified timestamp (ISO 8601)         |
+| `created_at`         | creation timestamp                         |
+| `data_type`          | payload encoding (`zstd` or `json`)        |
+| `data`               | the thread document (zstd-compressed JSON) |
+| `parent_id`          | parent thread, if any                      |
+| `folder_paths`       | project folder(s), newline-separated       |
+| `folder_paths_order` | display order of those folders             |
 
 The decoded document contains the message list plus metadata such as the
 **next model** to use (`{"provider": ..., "model": ...}`) and the agent
@@ -169,19 +169,19 @@ metadata while leaving everything else untouched.
 - A message contains ordered **parts**. A part is the smallest thing you can
   select, drop, or edit:
 
-| part type     | what it is                                              |
-| ------------- | ------------------------------------------------------- |
-| `text`        | normal user or assistant text                           |
-| `thinking`    | assistant reasoning / thinking blocks                   |
-| `image`       | an embedded image                                       |
+| part type     | what it is                                                |
+| ------------- | --------------------------------------------------------- |
+| `text`        | normal user or assistant text                             |
+| `thinking`    | assistant reasoning / thinking blocks                     |
+| `image`       | an embedded image                                         |
 | `tool_use`    | a tool call the agent made (e.g. `read_file`, `terminal`) |
-| `tool_result` | the output returned to the agent (often the bulky bit)  |
-| `mention`     | a context mention (e.g. another thread, a file)         |
+| `tool_result` | the output returned to the agent (often the bulky bit)    |
+| `mention`     | a context mention (e.g. another thread, a file)           |
 
-Every part has a stable id shown as `message:slot:index` (for example
+Every part has a stable ID shown as `message:slot:index` (for example
 `21:tool_result:0`). Tool parts also expose a **target** -- the file path,
 glob, URL, command, or query pulled from the tool's input -- which is what the
-path/regex filters match against.
+path and regular expression filters match against.
 
 ---
 
@@ -195,11 +195,11 @@ Run `zcm <command> --help` for the full, authoritative option list.
 
 ### Global options
 
-| option              | description                                              |
-| ------------------- | -------------------------------------------------------- |
-| `--db PATH`         | Path to `threads.db` (default: Zed's data directory).    |
+| option                 | description                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `--db PATH`            | Path to `threads.db` (default: Zed's data directory).    |
 | `-s, --case-sensitive` | Make all matching case-sensitive (default: insensitive). |
-| `--version`         | Print the version and exit.                              |
+| `--version`            | Print the version and exit.                              |
 
 ### `list`
 
@@ -216,8 +216,8 @@ zcm list --format json                # machine-readable
 
 ### `show`
 
-Print one thread's messages and parts, with part ids, sizes, tool names, and
-targets. Accepts a full or **prefix** thread id, or any thread filter (shows
+Print one thread's messages and parts, with part IDs, sizes, tool names, and
+targets. Accepts a full or **prefix** thread ID, or any thread filter (shows
 the first match).
 
 ```sh
@@ -230,7 +230,7 @@ zcm show 6395f4e5 --message 21 --full # one message, full text
 
 Use `--sort {document,size,length,kind}` (with optional `--reverse`) to reorder
 the parts. `--sort size` is the quickest way to find what is bloating the
-database; `--sort length` finds the longest *text* (e.g. a giant log or
+database; `--sort length` finds the longest _text_ (e.g. a giant log or
 thinking block). Each part line shows both its byte size and, for text-bearing
 parts, its character count.
 
@@ -275,17 +275,18 @@ zcm drop --images --keep-latest-images 1 --write --vacuum
 zcm drop --type thinking --mode remove --write
 ```
 
-| option                    | description                                              |
-| ------------------------- | -------------------------------------------------------- |
-| `--mode {placeholder,remove,strip-images}` | how to drop (default `placeholder`).      |
-| `--images`                | preset: target image parts and strip them.               |
-| `--keep-latest-images N`  | keep the newest *N* image-bearing parts per thread.      |
-| `--invert`                | act on parts that do **not** match the filter.           |
-| `--all`                   | allow dropping with no filter (dangerous).               |
+| option                                     | description                                         |
+| ------------------------------------------ | --------------------------------------------------- |
+| `--mode {placeholder,remove,strip-images}` | how to drop (default `placeholder`).                |
+| `--images`                                 | preset: target image parts and strip them.          |
+| `--keep-latest-images N`                   | keep the newest _N_ image-bearing parts per thread. |
+| `--invert`                                 | act on parts that do **not** match the filter.      |
+| `--all`                                    | allow dropping with no filter (dangerous).          |
 
 ### `edit`
 
-Rewrite part text in bulk. Use a regex replacement or set the text literally.
+Rewrite part text in bulk. Use a regular expression replacement or set the
+text literally.
 
 ```sh
 # Redact a token everywhere it appears in text/results.
@@ -341,51 +342,51 @@ zcm tui --read-only
 
 ### Thread filters
 
-| option | matches |
-| ------ | ------- |
-| `--thread-id ID` | exact id (repeatable, comma-separated) |
-| `--title-contains` / `--title-regex` | the title |
-| `--content-contains` / `--content-regex` | title **and** all message text |
-| `--folder` / `--folder-glob` / `--project` | project folder path / glob / basename |
-| `--model` / `--model-regex` | next model, as `provider/model` |
-| `--profile` | agent profile |
-| `--parent-id` | parent thread id |
-| `--created-after` / `--created-before` | creation date (ISO 8601) |
-| `--updated-after` / `--updated-before` | update date |
-| `--has-images` / `--no-images` | presence of images |
-| `--min-messages` / `--max-messages` | message count |
-| `--min-thread-size` / `--max-thread-size` | stored thread size (accepts `K`/`M`/`G`) |
-| `--limit N` | stop after N matching threads |
+| option                                     | matches                                  |
+| ------------------------------------------ | ---------------------------------------- |
+| `--thread-id ID`                           | exact ID (repeatable, comma-separated)   |
+| `--title-contains` / `--title-regex`       | the title                                |
+| `--content-contains` / `--content-regex`   | title **and** all message text           |
+| `--folder` / `--folder-glob` / `--project` | project folder path / glob / basename    |
+| `--model` / `--model-regex`                | next model, as `provider/model`          |
+| `--profile`                                | agent profile                            |
+| `--parent-id`                              | parent thread ID                         |
+| `--created-after` / `--created-before`     | creation date (ISO 8601)                 |
+| `--updated-after` / `--updated-before`     | update date                              |
+| `--has-images` / `--no-images`             | presence of images                       |
+| `--min-messages` / `--max-messages`        | message count                            |
+| `--min-thread-size` / `--max-thread-size`  | stored thread size (accepts `K`/`M`/`G`) |
+| `--limit N`                                | stop after N matching threads            |
 
 ### Part filters
 
-| option | matches |
-| ------ | ------- |
-| `--role {user,assistant}` | message role |
-| `--type {text,thinking,image,tool_use,tool_result,mention,other}` | part type |
-| `--tool NAME` | tool name (repeatable, comma-separated) |
-| `--path-glob GLOB` | tool target path (glob; repeatable) |
-| `--path-regex` / `--target-regex` | tool target path / any target (regex) |
-| `--part-contains` / `--part-regex` | the part's text |
-| `--errors-only` / `--no-errors` | tool-result error status |
-| `--images-only` | parts that carry image data |
-| `--min-size` / `--max-size` | serialized part **size** in bytes (accepts `K`/`M`/`G`) |
-| `--min-length` / `--max-length` | text **length** in characters |
+| option                                                            | matches                                                 |
+| ----------------------------------------------------------------- | ------------------------------------------------------- |
+| `--role {user,assistant}`                                         | message role                                            |
+| `--type {text,thinking,image,tool_use,tool_result,mention,other}` | part type                                               |
+| `--tool NAME`                                                     | tool name (repeatable, comma-separated)                 |
+| `--path-glob GLOB`                                                | tool target path (glob; repeatable)                     |
+| `--path-regex` / `--target-regex`                                 | tool target path / any target (regular expression)      |
+| `--part-contains` / `--part-regex`                                | the part's text                                         |
+| `--errors-only` / `--no-errors`                                   | tool-result error status                                |
+| `--images-only`                                                   | parts that carry image data                             |
+| `--min-size` / `--max-size`                                       | serialized part **size** in bytes (accepts `K`/`M`/`G`) |
+| `--min-length` / `--max-length`                                   | text **length** in characters                           |
 
 `size` counts on-disk bytes (so it includes image/base64 data); `length` counts
-characters of human-readable text. A large diff can be *big* in size yet *short*
+characters of human-readable text. A large diff can be _big_ in size yet _short_
 in length. Both axes work on every part type and can be combined, e.g.
 `--min-size 40K --max-length 3000` finds heavy-but-terse results. Sort by either
 with `show --sort size` / `show --sort length` (and in the TUI with `s`).
 
 ### Position selectors (within each thread)
 
-| option | selects |
-| ------ | ------- |
-| `--oldest N` | the first N messages |
-| `--newest N` | the last N messages |
-| `--index-min` / `--index-max` | messages in an index range |
-| `--middle` | the middle, with `--keep-oldest`/`--keep-newest` protecting the ends |
+| option                        | selects                                                              |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `--oldest N`                  | the first N messages                                                 |
+| `--newest N`                  | the last N messages                                                  |
+| `--index-min` / `--index-max` | messages in an index range                                           |
+| `--middle`                    | the middle, with `--keep-oldest`/`--keep-newest` protecting the ends |
 
 Dates apply at the **thread** level (Zed does not timestamp individual
 messages); positions apply **within** a thread.
@@ -447,39 +448,39 @@ press `w`, which always makes a backup first.
 
 **Thread list**
 
-| key | action |
-| --- | ------ |
-| `j` / `k`, arrows | move |
-| PgUp / PgDn, `g` / `G` | page / jump to ends |
-| Enter / `l` | open thread |
-| `/` | search (title, project, content) |
-| `s` | cycle sort (updated / size / title) |
-| `d` | toggle delete mark |
-| `r` | reassign project folder |
-| `m` | change next model (`provider:model`) |
-| `t` | change title |
-| `w` | write staged changes |
-| `?` | help |
-| `q` | quit |
+| key                    | action                               |
+| ---------------------- | ------------------------------------ |
+| `j` / `k`, arrows      | move                                 |
+| PgUp / PgDn, `g` / `G` | page / jump to ends                  |
+| Enter / `l`            | open thread                          |
+| `/`                    | search (title, project, content)     |
+| `s`                    | cycle sort (updated / size / title)  |
+| `d`                    | toggle delete mark                   |
+| `r`                    | reassign project folder              |
+| `m`                    | change next model (`provider:model`) |
+| `t`                    | change title                         |
+| `w`                    | write staged changes                 |
+| `?`                    | help                                 |
+| `q`                    | quit                                 |
 
 **Thread detail**
 
-| key | action |
-| --- | ------ |
-| `j` / `k`, arrows | move |
-| `space` | select / deselect a part |
-| `a` / `c` | select all / clear selection |
-| `d` | stage drop (placeholder) |
-| `D` | stage remove (delete the part) |
-| `i` | stage strip-images |
-| `e` | edit text inline |
-| `E` | edit text in `$EDITOR` |
-| `u` | clear staged change |
-| `/` | find within the thread |
-| `s` | cycle part sort (document / size / length) |
-| Enter | view full part text |
-| `w` | write staged changes |
-| `q` / `h` / Esc | back to the list |
+| key               | action                                     |
+| ----------------- | ------------------------------------------ |
+| `j` / `k`, arrows | move                                       |
+| `space`           | select / deselect a part                   |
+| `a` / `c`         | select all / clear selection               |
+| `d`               | stage drop (placeholder)                   |
+| `D`               | stage remove (delete the part)             |
+| `i`               | stage strip-images                         |
+| `e`               | edit text inline                           |
+| `E`               | edit text in `$EDITOR`                     |
+| `u`               | clear staged change                        |
+| `/`               | find within the thread                     |
+| `s`               | cycle part sort (document / size / length) |
+| Enter             | view full part text                        |
+| `w`               | write staged changes                       |
+| `q` / `h` / Esc   | back to the list                           |
 
 ---
 

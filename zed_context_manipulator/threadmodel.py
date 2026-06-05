@@ -3,11 +3,11 @@
 Zed has shipped (at least) two on-disk message encodings:
 
 * **new** -- a flat object with ``role`` plus ``segments`` / ``tool_uses`` /
-  ``tool_results`` lists.
+    ``tool_results`` lists.
 * **old** -- a serde enum, ``{"User": {...}}`` or ``{"Agent": {...}}``, whose
-  ``content`` list holds single-key variant objects (``Text``, ``Thinking``,
-  ``Image``, ``Mention``, ``ToolUse``) and whose ``tool_results`` is a map
-  keyed by tool-use id.
+    ``content`` list holds single-key variant objects (``Text``, ``Thinking``,
+    ``Image``, ``Mention``, ``ToolUse``) and whose ``tool_results`` is a map
+    keyed by tool-use id.
 
 :class:`Thread`, :class:`Message`, and :class:`Part` present a single shape to
 the rest of the program while keeping references into the live document so that
@@ -418,6 +418,33 @@ def extract_tool_target(name: str | None, tool_input: Any) -> tuple[str | None, 
     return None, None
 
 
+def _tool_result_part(
+    message: Message,
+    index: int,
+    result: Any,
+    tu_id: str | None,
+    name: str | None,
+    target: str | None,
+    target_kind: str | None,
+) -> Part:
+    """Build a normalized tool-result Part (shared by both encodings)."""
+
+    is_error = bool(result.get("is_error")) if isinstance(result, dict) else None
+    return Part(
+        kind=KIND_TOOL_RESULT,
+        slot="tool_result",
+        index=index,
+        raw=result,
+        message_index=message.index,
+        role=message.role,
+        tool_name=name,
+        tool_use_id=tu_id,
+        is_error=is_error,
+        target=target,
+        target_kind=target_kind,
+    )
+
+
 class Thread:
     """A parsed thread document plus convenience accessors."""
 
@@ -483,19 +510,7 @@ class Thread:
             name = uses_by_id.get(tu_id or "")
             target, target_kind = targets_by_id.get(tu_id or "", (None, None))
             message.parts.append(
-                Part(
-                    kind=KIND_TOOL_RESULT,
-                    slot="tool_result",
-                    index=i,
-                    raw=result,
-                    message_index=message.index,
-                    role=message.role,
-                    tool_name=name,
-                    tool_use_id=tu_id,
-                    is_error=bool(result.get("is_error")) if isinstance(result, dict) else None,
-                    target=target,
-                    target_kind=target_kind,
-                )
+                _tool_result_part(message, i, result, tu_id, name, target, target_kind)
             )
 
     def _parse_old(self, message: Message, body: dict[str, Any]) -> None:
@@ -551,19 +566,7 @@ class Thread:
             name = result.get("tool_name") or names_by_id.get(tu_id or "")
             target, target_kind = targets_by_id.get(tu_id or "", (None, None))
             message.parts.append(
-                Part(
-                    kind=KIND_TOOL_RESULT,
-                    slot="tool_result",
-                    index=i,
-                    raw=result,
-                    message_index=message.index,
-                    role=message.role,
-                    tool_name=name,
-                    tool_use_id=tu_id,
-                    is_error=bool(result.get("is_error")),
-                    target=target,
-                    target_kind=target_kind,
-                )
+                _tool_result_part(message, i, result, tu_id, name, target, target_kind)
             )
 
     # -- aggregate views ----------------------------------------------------
