@@ -81,10 +81,11 @@ jobs:
           path: dist/
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        with:
-          files: dist/*
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --generate-notes
 
   dev-release:
     name: Create GitHub Pre-Release
@@ -107,13 +108,14 @@ jobs:
         run: gh release delete latest --yes --cleanup-tag || true
 
       - name: Update Development Build release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        with:
-          tag_name: latest
-          name: Development Build
-          body: |
-            Latest build from the `main` branch.
-            This is an automated pre-release and may be unstable.
-          files: dist/*
-          prerelease: true
-          make_latest: false
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh release create latest dist/* \
+            --target "$SHA" \
+            --title "Development Build" \
+            --notes "Latest build from the main branch. This is an automated pre-release and may be unstable." \
+            --prerelease \
+            --latest=false
