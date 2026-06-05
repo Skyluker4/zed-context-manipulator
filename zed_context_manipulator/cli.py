@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from collections.abc import Sequence
@@ -28,6 +29,34 @@ from .threadmodel import ALL_KINDS, Thread
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+_SIZE_UNITS = {
+    "": 1,
+    "b": 1,
+    "k": 1024,
+    "kb": 1024,
+    "kib": 1024,
+    "m": 1024**2,
+    "mb": 1024**2,
+    "mib": 1024**2,
+    "g": 1024**3,
+    "gb": 1024**3,
+    "gib": 1024**3,
+    "t": 1024**4,
+}
+
+
+def parse_size(text: str) -> int:
+    """Parse a byte count that may carry a K/M/G/T suffix (e.g. '2.5M')."""
+
+    match = re.fullmatch(r"\s*([0-9]*\.?[0-9]+)\s*([a-zA-Z]*)\s*", text or "")
+    if not match:
+        raise argparse.ArgumentTypeError(f"invalid size: {text!r}")
+    number, suffix = match.group(1), match.group(2).lower()
+    if suffix not in _SIZE_UNITS:
+        raise argparse.ArgumentTypeError(f"unknown size unit: {suffix!r}")
+    return int(float(number) * _SIZE_UNITS[suffix])
 
 
 def human_size(num: int) -> str:
@@ -77,6 +106,8 @@ def build_thread_query(args: argparse.Namespace) -> ThreadQuery:
         has_images=_tristate(getattr(args, "has_images", None), getattr(args, "no_images", None)),
         min_messages=getattr(args, "min_messages", None),
         max_messages=getattr(args, "max_messages", None),
+        min_size=getattr(args, "min_thread_size", None),
+        max_size=getattr(args, "max_thread_size", None),
         ignore_case=ignore_case,
     )
 
@@ -157,6 +188,18 @@ def _add_thread_filter(parser: argparse.ArgumentParser) -> None:
     group.add_argument("--no-images", action="store_true", help="Only threads without images")
     group.add_argument("--min-messages", type=int, help="Only threads with >= N messages")
     group.add_argument("--max-messages", type=int, help="Only threads with <= N messages")
+    group.add_argument(
+        "--min-thread-size",
+        type=parse_size,
+        metavar="SIZE",
+        help="Only threads >= this stored size (accepts K/M/G suffixes)",
+    )
+    group.add_argument(
+        "--max-thread-size",
+        type=parse_size,
+        metavar="SIZE",
+        help="Only threads <= this stored size (accepts K/M/G suffixes)",
+    )
     group.add_argument("--limit", type=int, help="Stop after N matching threads")
 
 
@@ -177,8 +220,12 @@ def _add_part_filter(parser: argparse.ArgumentParser) -> None:
     group.add_argument("--errors-only", action="store_true", help="Only tool results with errors")
     group.add_argument("--no-errors", action="store_true", help="Only tool results without errors")
     group.add_argument("--images-only", action="store_true", help="Only parts that carry images")
-    group.add_argument("--min-size", type=int, help="Only parts >= N bytes")
-    group.add_argument("--max-size", type=int, help="Only parts <= N bytes")
+    group.add_argument(
+        "--min-size", type=parse_size, metavar="SIZE", help="Only parts >= this size (K/M/G ok)"
+    )
+    group.add_argument(
+        "--max-size", type=parse_size, metavar="SIZE", help="Only parts <= this size (K/M/G ok)"
+    )
 
 
 def _add_position(parser: argparse.ArgumentParser) -> None:
@@ -237,6 +284,13 @@ def build_parser() -> argparse.ArgumentParser:
     _add_part_filter(p_show)
     p_show.add_argument("--message", type=int, help="Only show this message index")
     p_show.add_argument("--full", action="store_true", help="Show full part text, not previews")
+    p_show.add_argument(
+        "--sort",
+        choices=["document", "size", "kind"],
+        default="document",
+        help="Order parts by document position (default), size, or type",
+    )
+    p_show.add_argument("--reverse", action="store_true", help="Reverse the part sort order")
     p_show.set_defaults(func=cmd_show)
 
     p_search = sub.add_parser("search", help="Search across threads and parts")
@@ -419,13 +473,28 @@ def cmd_show(args: argparse.Namespace) -> int:
         print(f"Model:   {provider or ''}/{model or ''}   profile={thread.profile or '-'}")
         print(f"Messages: {len(thread.messages)}   Parts: {thread.part_count}")
         print("-" * 78)
+        parts = []
         for message in thread.messages:
             if args.message is not None and message.index != args.message:
                 continue
-            print(f"[{message.index}] {message.role.upper()} ({message.fmt})")
             for part in message.iter_parts():
-                if not part_query.is_empty and not part_query.matches(part):
-                    continue
+                if part_query.is_empty or part_query.matches(part):
+                    parts.append(part)
+        sort = getattr(args, "sort", "document")
+        if sort == "document":
+            current = None
+            for part in parts:
+                if part.message_index != current:
+                    current = part.message_index
+                    msg = thread.messages[current]
+                    print(f"[{msg.index}] {msg.role.upper()} ({msg.fmt})")
+                _print_part(part, full=args.full)
+        else:
+            if sort == "size":
+                parts.sort(key=lambda p: p.size(), reverse=not args.reverse)
+            else:  # kind
+                parts.sort(key=lambda p: (p.kind, -p.size()), reverse=args.reverse)
+            for part in parts:
                 _print_part(part, full=args.full)
     return 0
 
@@ -452,8 +521,6 @@ def _print_part(part, *, full: bool) -> None:
 
 
 def cmd_search(args: argparse.Namespace) -> int:
-    import re
-
     flags = 0 if args.case_sensitive else re.IGNORECASE
     if args.regex:
         pattern = re.compile(args.query, flags)

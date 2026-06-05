@@ -97,6 +97,8 @@ class ThreadQuery:
     has_images: bool | None = None
     min_messages: int | None = None
     max_messages: int | None = None
+    min_size: int | None = None
+    max_size: int | None = None
     ignore_case: bool = True
 
     def needs_document(self) -> bool:
@@ -126,6 +128,8 @@ class ThreadQuery:
         if self.parent_id is not None and (row.parent_id or "") != self.parent_id:
             return False
         if not self._match_dates(row):
+            return False
+        if not self._match_size(row):
             return False
         if self.needs_document():
             if thread is None:
@@ -188,6 +192,14 @@ class ThreadQuery:
                 return False
             if direction == "before" and actual > bound:
                 return False
+        return True
+
+    def _match_size(self, row: ThreadRow) -> bool:
+        size = row.raw_size
+        if self.min_size is not None and size < self.min_size:
+            return False
+        if self.max_size is not None and size > self.max_size:
+            return False
         return True
 
     def _match_document(self, thread: Thread) -> bool:

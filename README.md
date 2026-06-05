@@ -207,6 +207,7 @@ List threads that match the [thread filters](#thread-filters).
 zcm list                              # newest first
 zcm list --project m3u8-extractor     # only one project
 zcm list --sort size --count-messages # biggest first, show message counts
+zcm list --min-thread-size 1M          # only threads at least 1 MiB on disk
 zcm list --format ids                 # just ids (handy for scripting)
 zcm list --format json                # machine-readable
 ```
@@ -221,8 +222,12 @@ the first match).
 zcm show 6395f4e5                     # by id prefix
 zcm show --title-contains "Signal"    # by title
 zcm show 6395f4e5 --type image        # only image parts
+zcm show 6395f4e5 --sort size         # biggest parts first
 zcm show 6395f4e5 --message 21 --full # one message, full text
 ```
+
+Use `--sort {document,size,kind}` (with optional `--reverse`) to reorder the
+parts -- `--sort size` is the quickest way to find what is bloating a thread.
 
 ### `search`
 
@@ -344,6 +349,7 @@ zcm tui --read-only
 | `--updated-after` / `--updated-before` | update date |
 | `--has-images` / `--no-images` | presence of images |
 | `--min-messages` / `--max-messages` | message count |
+| `--min-thread-size` / `--max-thread-size` | stored thread size (accepts `K`/`M`/`G`) |
 | `--limit N` | stop after N matching threads |
 
 ### Part filters
@@ -358,7 +364,9 @@ zcm tui --read-only
 | `--part-contains` / `--part-regex` | the part's text |
 | `--errors-only` / `--no-errors` | tool-result error status |
 | `--images-only` | parts that carry image data |
-| `--min-size` / `--max-size` | serialized part size in bytes |
+| `--min-size` / `--max-size` | serialized part size (accepts `K`/`M`/`G`) |
+
+Most commands also sort by size: `list --sort size`, `show --sort size`.
 
 ### Position selectors (within each thread)
 
@@ -400,6 +408,14 @@ zcm drop --middle --keep-newest 10 --type tool_result --type tool_use --write
 zcm thread --updated-before 2025-01-01 --delete --write -y
 ```
 
+**Find what is bloating a thread, then prune the biggest parts.**
+
+```sh
+zcm list --min-thread-size 1M --sort size   # heaviest threads
+zcm show <id> --sort size                   # heaviest parts in one thread
+zcm drop --thread-id <id> --min-size 50K --write
+```
+
 **Bulk-redact secrets that leaked into results.**
 
 ```sh
@@ -427,6 +443,7 @@ press `w`, which always makes a backup first.
 | PgUp / PgDn, `g` / `G` | page / jump to ends |
 | Enter / `l` | open thread |
 | `/` | search (title, project, content) |
+| `s` | cycle sort (updated / size / title) |
 | `d` | toggle delete mark |
 | `r` | reassign project folder |
 | `m` | change next model (`provider:model`) |
@@ -449,6 +466,7 @@ press `w`, which always makes a backup first.
 | `E` | edit text in `$EDITOR` |
 | `u` | clear staged change |
 | `/` | find within the thread |
+| `s` | toggle size-sorted (largest first) view |
 | Enter | view full part text |
 | `w` | write staged changes |
 | `q` / `h` / Esc | back to the list |

@@ -35,9 +35,11 @@ from .threadmodel import Thread
 STATE_LIST = "list"
 STATE_DETAIL = "detail"
 
-HELP_LIST = "enter open  / search  d del  r folder  m model  t title  w write  q quit  ? help"
+HELP_LIST = (
+    "enter open  / search  s sort  d del  r folder  m model  t title  w write  q quit  ? help"
+)
 HELP_DETAIL = (
-    "space sel  d drop  D remove  i img  e edit  E editor  u undo  / find  a all  w write  q back"
+    "space sel  d drop  D remove  i img  e edit  u undo  / find  s size  a all  w write  q back"
 )
 
 
@@ -80,12 +82,14 @@ class App:
         self.list_index = 0
         self.list_offset = 0
         self.list_search = ""
+        self.list_sort = "updated"
 
         self.current_thread: ThreadRow | None = None
         self.detail_rows: list[DetailRow] = []
         self.detail_index = 0
         self.detail_offset = 0
         self.detail_search = ""
+        self.detail_sort = "document"
         self.selected: set[str] = set()
 
         self.message = "Loading..."
@@ -146,8 +150,23 @@ class App:
                     except (ValueError, KeyError):
                         continue
             self.view = view
+        self._sort_view()
         self.list_index = min(self.list_index, max(0, len(self.view) - 1))
         self.list_offset = 0
+
+    def _sort_view(self) -> None:
+        if self.list_sort == "size":
+            self.view.sort(key=lambda r: r.raw_size, reverse=True)
+        elif self.list_sort == "title":
+            self.view.sort(key=lambda r: (r.summary or "").lower())
+        else:
+            self.view.sort(key=lambda r: r.updated_at or "", reverse=True)
+
+    def cycle_list_sort(self) -> None:
+        order = ["updated", "size", "title"]
+        self.list_sort = order[(order.index(self.list_sort) + 1) % len(order)]
+        self._sort_view()
+        self.message = f"Sorted by {self.list_sort}."
 
     # -- rendering ----------------------------------------------------------
     def safe_addstr(self, y: int, x: int, text: str, attr: int = 0) -> None:
@@ -190,7 +209,7 @@ class App:
     def draw_list(self) -> None:
         height, width = self.stdscr.getmaxyx()
         title = "Zed Context Manipulator"
-        sub = f"  threads: {len(self.view)}/{len(self.rows)}"
+        sub = f"  threads: {len(self.view)}/{len(self.rows)}   sort: {self.list_sort}"
         if self.list_search:
             sub += f"   filter: '{self.list_search}'"
         self.safe_addstr(0, 0, (title + sub).ljust(width - 1), curses.A_BOLD)
@@ -218,7 +237,7 @@ class App:
         date = (row.updated_at or "")[:10]
         title = row.summary or "(untitled)"
         project = os.path.basename((row.folders[0].rstrip("/")) if row.folders else "")
-        line = f"{marker} {date}  {title}"
+        line = f"{marker} {date} {_short_size(row.raw_size):>6}  {title}"
         if project:
             line += f"   [{project}]"
         row_attr = attr
@@ -227,9 +246,12 @@ class App:
         self.safe_addstr(y, 0, line.ljust(width - 1), row_attr)
 
     def build_detail_rows(self, thread: Thread) -> None:
-        rows: list[DetailRow] = []
         needle = self.detail_search.strip().lower()
         part_query = PartQuery(content_contains=self.detail_search) if needle else None
+        if self.detail_sort == "size":
+            self._build_detail_rows_by_size(thread, part_query)
+            return
+        rows: list[DetailRow] = []
         for message in thread.messages:
             header = DetailRow(
                 kind="header",
@@ -250,6 +272,19 @@ class App:
         self.detail_rows = rows
         self.detail_index = min(self.detail_index, max(0, len(rows) - 1))
 
+    def _build_detail_rows_by_size(self, thread: Thread, part_query) -> None:
+        parts: list[DetailRow] = []
+        for message in thread.messages:
+            for part in message.iter_parts():
+                if part_query is not None and not part_query.matches(part):
+                    continue
+                dr = DetailRow(kind="part", text="", message_index=message.index)
+                dr.part = part
+                parts.append(dr)
+        parts.sort(key=lambda d: d.part.size(), reverse=True)
+        self.detail_rows = parts
+        self.detail_index = min(self.detail_index, max(0, len(parts) - 1))
+
     def draw_detail(self) -> None:
         height, width = self.stdscr.getmaxyx()
         row = self.current_thread
@@ -257,6 +292,8 @@ class App:
             return
         title = row.summary or "(untitled)"
         head = f"{title}"
+        if self.detail_sort != "document":
+            head += f"   sort: {self.detail_sort}"
         if self.detail_search:
             head += f"   find: '{self.detail_search}'"
         self.safe_addstr(0, 0, head.ljust(width - 1), curses.A_BOLD)
@@ -544,6 +581,14 @@ class App:
         self.detail_index = 0
         self.detail_offset = 0
 
+    def toggle_detail_sort(self) -> None:
+        self.detail_sort = "size" if self.detail_sort == "document" else "document"
+        if self.current_thread is not None:
+            self.build_detail_rows(self.get_thread(self.current_thread))
+        self.detail_index = 0
+        self.detail_offset = 0
+        self.message = f"Parts sorted by {self.detail_sort}."
+
     # -- writing ------------------------------------------------------------
     def commit(self) -> None:
         if self.read_only:
@@ -664,6 +709,8 @@ class App:
             self.list_set_model()
         elif key == ord("t"):
             self.list_set_title()
+        elif key == ord("s"):
+            self.cycle_list_sort()
         elif key == ord("w"):
             self.commit()
         elif key == ord("?"):
@@ -707,6 +754,8 @@ class App:
         elif key == ord("c"):
             self.selected.clear()
             self.message = "Selection cleared."
+        elif key == ord("s"):
+            self.toggle_detail_sort()
         elif key == ord("/"):
             self.detail_find()
         elif key in (curses.KEY_ENTER, 10, 13):
@@ -731,6 +780,7 @@ Thread list:
   g / G           top / bottom
   Enter / l       open thread
   /               search (title, project, content)
+  s               cycle sort (updated / size / title)
   d               toggle delete mark
   r               reassign project folder
   m               change next model (provider:model)
@@ -749,6 +799,7 @@ Thread detail:
   E               edit text in $EDITOR
   u               clear staged change on selection/part
   /               find within the thread
+  s               toggle size-sorted (largest first) view
   Enter           view full part text
   w               write staged changes
   q / h / Esc     back to list
