@@ -24,7 +24,7 @@ from .operations import (
     execute,
     matching_threads,
 )
-from .threadmodel import ALL_KINDS, Thread
+from .threadmodel import ALL_KINDS, Thread, format_label
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -495,7 +495,7 @@ def cmd_show(args: argparse.Namespace) -> int:
                 if part.message_index != current:
                     current = part.message_index
                     msg = thread.messages[current]
-                    print(f"[{msg.index}] {msg.role.upper()} ({msg.fmt})")
+                    print(f"[{msg.index}] {msg.role.upper()} ({format_label(msg.fmt)})")
                 _print_part(part, full=args.full)
         else:
             if sort == "size":

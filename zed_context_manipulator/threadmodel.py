@@ -46,6 +46,18 @@ ALL_KINDS = (
 ROLE_USER = "user"
 ROLE_ASSISTANT = "assistant"
 
+# On-disk message encodings and their human-friendly display labels.
+FORMAT_NEW = "new"
+FORMAT_OLD = "old"
+FORMAT_LABELS = {FORMAT_NEW: "current", FORMAT_OLD: "legacy"}
+
+
+def format_label(fmt: str) -> str:
+    """Human-friendly name for a message's on-disk encoding."""
+
+    return FORMAT_LABELS.get(fmt, fmt)
+
+
 PLACEHOLDER = (
     "[Content omitted from Zed thread history by zed-context-manipulator to "
     "reduce request payload.]"

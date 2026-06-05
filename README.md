@@ -163,7 +163,9 @@ metadata while leaving everything else untouched.
 
 - A **thread** is one conversation.
 - A thread contains ordered **messages**, each with a `role` (`user` or
-  `assistant`).
+  `assistant`). In `show` and the TUI a message is tagged `current` or
+  `legacy`, reflecting Zed's newer or older on-disk encoding; both are handled
+  identically.
 - A message contains ordered **parts**. A part is the smallest thing you can
   select, drop, or edit:
 

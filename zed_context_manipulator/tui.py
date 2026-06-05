@@ -30,7 +30,7 @@ from .operations import (
     PartAction,
     ThreadOp,
 )
-from .threadmodel import Thread
+from .threadmodel import Thread, format_label
 
 STATE_LIST = "list"
 STATE_DETAIL = "detail"
@@ -255,7 +255,7 @@ class App:
         for message in thread.messages:
             header = DetailRow(
                 kind="header",
-                text=f"[{message.index}] {message.role.upper()} ({message.fmt})",
+                text=f"[{message.index}] {message.role.upper()} ({format_label(message.fmt)})",
                 message_index=message.index,
             )
             part_lines: list[DetailRow] = []
