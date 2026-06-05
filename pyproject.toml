@@ -9,10 +9,10 @@ description = "Search, filter, edit, and prune Zed agent conversation threads"
 readme = "README.md"
 license = "AGPL-3.0-only"
 requires-python = ">=3.11"
-authors = [{ name = "Luke Andrew Simmons" }]
+authors = [{ name = "Luke Andrew Simmons", email = "luke5083@live.com" }]
 keywords = ["zed", "agent", "llm", "sqlite", "tui", "context"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Environment :: Console :: Curses",
     "Intended Audience :: Developers",
