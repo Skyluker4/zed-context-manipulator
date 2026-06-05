@@ -138,6 +138,8 @@ def build_part_query(args: argparse.Namespace) -> PartQuery:
         images_only=bool(getattr(args, "images_only", False)),
         min_size=getattr(args, "min_size", None),
         max_size=getattr(args, "max_size", None),
+        min_length=getattr(args, "min_length", None),
+        max_length=getattr(args, "max_length", None),
         ignore_case=ignore_case,
     )
 
@@ -226,6 +228,12 @@ def _add_part_filter(parser: argparse.ArgumentParser) -> None:
     group.add_argument(
         "--max-size", type=parse_size, metavar="SIZE", help="Only parts <= this size (K/M/G ok)"
     )
+    group.add_argument(
+        "--min-length", type=int, metavar="CHARS", help="Only parts with >= N characters of text"
+    )
+    group.add_argument(
+        "--max-length", type=int, metavar="CHARS", help="Only parts with <= N characters of text"
+    )
 
 
 def _add_position(parser: argparse.ArgumentParser) -> None:
@@ -286,9 +294,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_show.add_argument("--full", action="store_true", help="Show full part text, not previews")
     p_show.add_argument(
         "--sort",
-        choices=["document", "size", "kind"],
+        choices=["document", "size", "length", "kind"],
         default="document",
-        help="Order parts by document position (default), size, or type",
+        help="Order parts by document position (default), size, length, or type",
     )
     p_show.add_argument("--reverse", action="store_true", help="Reverse the part sort order")
     p_show.set_defaults(func=cmd_show)
@@ -492,6 +500,8 @@ def cmd_show(args: argparse.Namespace) -> int:
         else:
             if sort == "size":
                 parts.sort(key=lambda p: p.size(), reverse=not args.reverse)
+            elif sort == "length":
+                parts.sort(key=lambda p: p.length(), reverse=not args.reverse)
             else:  # kind
                 parts.sort(key=lambda p: (p.kind, -p.size()), reverse=args.reverse)
             for part in parts:
@@ -509,7 +519,10 @@ def _print_part(part, *, full: bool) -> None:
     if part.is_error:
         extra += " [error]"
     flags = " [img]" if part.has_image else ""
-    print(f"  - {part.pid}  {tag}{flags}  ({human_size(part.size())}){extra}")
+    meta = human_size(part.size())
+    if not part.has_image:
+        meta += f", {part.length()} chars"
+    print(f"  - {part.pid}  {tag}{flags}  ({meta}){extra}")
     text = part.text()
     if not text:
         return

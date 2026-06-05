@@ -256,6 +256,8 @@ class PartQuery:
     images_only: bool = False
     min_size: int | None = None
     max_size: int | None = None
+    min_length: int | None = None
+    max_length: int | None = None
     message_indices: set[int] | None = None
     ignore_case: bool = True
 
@@ -276,6 +278,8 @@ class PartQuery:
                 self.images_only,
                 self.min_size,
                 self.max_size,
+                self.min_length,
+                self.max_length,
                 self.message_indices,
             )
         )
@@ -301,6 +305,8 @@ class PartQuery:
         if not self._match_content(part):
             return False
         if not self._match_size(part):
+            return False
+        if not self._match_length(part):
             return False
         return True
 
@@ -342,6 +348,16 @@ class PartQuery:
         if self.min_size is not None and size < self.min_size:
             return False
         if self.max_size is not None and size > self.max_size:
+            return False
+        return True
+
+    def _match_length(self, part: Part) -> bool:
+        if self.min_length is None and self.max_length is None:
+            return True
+        length = part.length()
+        if self.min_length is not None and length < self.min_length:
+            return False
+        if self.max_length is not None and length > self.max_length:
             return False
         return True
 

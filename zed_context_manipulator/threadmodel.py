@@ -202,12 +202,24 @@ class Part:
         return snippet
 
     def size(self) -> int:
-        """Approximate serialized size of this part, in bytes."""
+        """Approximate serialized size of this part, in bytes.
+
+        Reflects the on-disk weight of the part, including image/base64 data.
+        """
 
         try:
             return len(json.dumps(self.raw, ensure_ascii=False).encode("utf-8"))
         except (TypeError, ValueError):
             return len(str(self.raw).encode("utf-8"))
+
+    def length(self) -> int:
+        """Character length of the part's textual content.
+
+        Distinct from :meth:`size`: this counts characters of human-readable
+        text (empty/placeholder for binary parts such as images).
+        """
+
+        return len(self.text())
 
     # -- editing ------------------------------------------------------------
     @property

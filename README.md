@@ -226,8 +226,11 @@ zcm show 6395f4e5 --sort size         # biggest parts first
 zcm show 6395f4e5 --message 21 --full # one message, full text
 ```
 
-Use `--sort {document,size,kind}` (with optional `--reverse`) to reorder the
-parts -- `--sort size` is the quickest way to find what is bloating a thread.
+Use `--sort {document,size,length,kind}` (with optional `--reverse`) to reorder
+the parts. `--sort size` is the quickest way to find what is bloating the
+database; `--sort length` finds the longest *text* (e.g. a giant log or
+thinking block). Each part line shows both its byte size and, for text-bearing
+parts, its character count.
 
 ### `search`
 
@@ -364,9 +367,14 @@ zcm tui --read-only
 | `--part-contains` / `--part-regex` | the part's text |
 | `--errors-only` / `--no-errors` | tool-result error status |
 | `--images-only` | parts that carry image data |
-| `--min-size` / `--max-size` | serialized part size (accepts `K`/`M`/`G`) |
+| `--min-size` / `--max-size` | serialized part **size** in bytes (accepts `K`/`M`/`G`) |
+| `--min-length` / `--max-length` | text **length** in characters |
 
-Most commands also sort by size: `list --sort size`, `show --sort size`.
+`size` counts on-disk bytes (so it includes image/base64 data); `length` counts
+characters of human-readable text. A large diff can be *big* in size yet *short*
+in length. Both axes work on every part type and can be combined, e.g.
+`--min-size 40K --max-length 3000` finds heavy-but-terse results. Sort by either
+with `show --sort size` / `show --sort length` (and in the TUI with `s`).
 
 ### Position selectors (within each thread)
 
@@ -466,7 +474,7 @@ press `w`, which always makes a backup first.
 | `E` | edit text in `$EDITOR` |
 | `u` | clear staged change |
 | `/` | find within the thread |
-| `s` | toggle size-sorted (largest first) view |
+| `s` | cycle part sort (document / size / length) |
 | Enter | view full part text |
 | `w` | write staged changes |
 | `q` / `h` / Esc | back to the list |

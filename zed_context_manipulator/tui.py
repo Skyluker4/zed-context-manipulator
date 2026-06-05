@@ -39,7 +39,7 @@ HELP_LIST = (
     "enter open  / search  s sort  d del  r folder  m model  t title  w write  q quit  ? help"
 )
 HELP_DETAIL = (
-    "space sel  d drop  D remove  i img  e edit  u undo  / find  s size  a all  w write  q back"
+    "space sel  d drop  D remove  i img  e edit  u undo  / find  s sort  a all  w write  q back"
 )
 
 
@@ -248,8 +248,8 @@ class App:
     def build_detail_rows(self, thread: Thread) -> None:
         needle = self.detail_search.strip().lower()
         part_query = PartQuery(content_contains=self.detail_search) if needle else None
-        if self.detail_sort == "size":
-            self._build_detail_rows_by_size(thread, part_query)
+        if self.detail_sort in ("size", "length"):
+            self._build_detail_rows_sorted(thread, part_query)
             return
         rows: list[DetailRow] = []
         for message in thread.messages:
@@ -272,7 +272,7 @@ class App:
         self.detail_rows = rows
         self.detail_index = min(self.detail_index, max(0, len(rows) - 1))
 
-    def _build_detail_rows_by_size(self, thread: Thread, part_query) -> None:
+    def _build_detail_rows_sorted(self, thread: Thread, part_query) -> None:
         parts: list[DetailRow] = []
         for message in thread.messages:
             for part in message.iter_parts():
@@ -281,7 +281,10 @@ class App:
                 dr = DetailRow(kind="part", text="", message_index=message.index)
                 dr.part = part
                 parts.append(dr)
-        parts.sort(key=lambda d: d.part.size(), reverse=True)
+        if self.detail_sort == "length":
+            parts.sort(key=lambda d: d.part.length(), reverse=True)
+        else:
+            parts.sort(key=lambda d: d.part.size(), reverse=True)
         self.detail_rows = parts
         self.detail_index = min(self.detail_index, max(0, len(parts) - 1))
 
@@ -333,8 +336,11 @@ class App:
         tag = part.kind + (f":{part.tool_name}" if part.tool_name else "")
         target = f" {part.target}" if part.target else ""
         img = "img " if part.has_image else ""
-        size = _short_size(part.size())
-        text = f"  {mark}{flag} {tag} {img}{size}{target}  {part.preview(width)}"
+        if self.detail_sort == "length" and not part.has_image:
+            metric = f"{part.length()}c"
+        else:
+            metric = _short_size(part.size())
+        text = f"  {mark}{flag} {tag} {img}{metric}{target}  {part.preview(width)}"
         if idx == self.detail_index:
             attr |= curses.A_REVERSE
         self.safe_addstr(y, 0, text[: width - 1], attr)
@@ -582,7 +588,8 @@ class App:
         self.detail_offset = 0
 
     def toggle_detail_sort(self) -> None:
-        self.detail_sort = "size" if self.detail_sort == "document" else "document"
+        order = ["document", "size", "length"]
+        self.detail_sort = order[(order.index(self.detail_sort) + 1) % len(order)]
         if self.current_thread is not None:
             self.build_detail_rows(self.get_thread(self.current_thread))
         self.detail_index = 0
@@ -799,7 +806,7 @@ Thread detail:
   E               edit text in $EDITOR
   u               clear staged change on selection/part
   /               find within the thread
-  s               toggle size-sorted (largest first) view
+  s               cycle sort (document / size / length)
   Enter           view full part text
   w               write staged changes
   q / h / Esc     back to list
